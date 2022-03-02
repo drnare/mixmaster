@@ -22,6 +22,7 @@ export const GlobalStyle = createGlobalStyle(
     th {
       margin: 0;
       padding: 0;
+      color: white;
     }
 
     ul,
@@ -33,6 +34,7 @@ export const GlobalStyle = createGlobalStyle(
       background: ${theme.colors.background.primary};
       min-height: 100vh;
       line-height: 1.5;
+      overflow: hidden;
     }
 
     table,

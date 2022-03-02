@@ -1,15 +1,23 @@
 import styled, { css } from 'styled-components';
 
-export const Container = styled.div`
-  display: flex;
-  width: 100%;
-`;
+export const Container = styled.div(
+  ({ theme }) => css`
+    display: flex;
+    width: 100%;
+    height: 100vh;
+    overflow: auto;
+    padding-top: calc(${theme.units.l} * 2);
+
+    @media (max-width: 800px) {
+      flex-direction: column;
+    }
+  `
+);
 
 export const EventsWrapper = styled.div`
   max-height: 100vh;
   max-width: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: auto;
   width: 100%;
 `;
 
