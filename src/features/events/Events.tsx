@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { MIXPANEL_URLS } from '../../constants';
 import { MixpanelEvent } from '../../types';
 import Table from '../../components/table';
@@ -8,7 +9,7 @@ import { Controls } from './Controls';
 
 export const Events = () => {
   const [events, setEvents] = useState<MixpanelEvent[]>([]);
-  const [activeEvent, setActiveEvent] = useState<MixpanelEvent | null>(null);
+  const [activeEventId, setActiveEventId] = useState<string | null>(null);
   const [recording, setRecording] = useState(true);
 
   useEffect(() => {
@@ -23,9 +24,34 @@ export const Events = () => {
   }, [recording]);
 
   const handleLog = ({ request }: chrome.devtools.network.Request) => {
-    if (MIXPANEL_URLS.some((url) => request.url.includes(url))) {
-      setEvents((prevState) => [getPayload(request.url), ...prevState]);
+    if (!MIXPANEL_URLS.some((url) => request.url.includes(url))) {
+      return;
     }
+
+    const urlParams = new URL(request.url).searchParams;
+    const [{ value }] = request.postData?.params || [];
+
+    if (request.method === 'POST' && urlParams.get('verbose')) {
+      const events = (JSON.parse(decodeURIComponent(String(value))) ||
+        []) as MixpanelEvent[];
+      return events.length > 0 && addEvents(events);
+    }
+
+    if (request.method === 'POST' && !urlParams.get('verbose')) {
+      return value && addEvents([decodePayload(value)]);
+    }
+
+    return addEvents([getPayload(request.url)]);
+  };
+
+  const addEvents = (trackedEvents: MixpanelEvent[]) => {
+    const eventsWithCreatedDate = trackedEvents.map((event) => ({
+      ...event,
+      created: new Date(),
+      id: uuidv4(),
+    }));
+
+    setEvents((prevState) => [...eventsWithCreatedDate, ...prevState]);
   };
 
   const handleDownload = () => {
@@ -37,17 +63,15 @@ export const Events = () => {
     );
     link.setAttribute('download', 'events.json');
     link.click();
+    document.removeChild(link);
   };
 
   const handleClear = () => {
-    setActiveEvent(null);
+    setActiveEventId(null);
     setEvents([]);
   };
 
-  const getPayload = (url: string) => ({
-    ...decodePayload(getPayloadFromUrl(url)),
-    created: new Date(),
-  });
+  const getPayload = (url: string) => decodePayload(getPayloadFromUrl(url));
 
   const getPayloadFromUrl = (url: string) =>
     String(new URL(url).searchParams.get('data'));
@@ -93,19 +117,11 @@ export const Events = () => {
             </Table.Row>
             {events.map((event) => (
               <Table.Row
-                key={event.properties.distinct_id}
+                key={event.id}
                 onClick={() =>
-                  setActiveEvent(
-                    activeEvent?.created.toISOString() ===
-                      event.created.toISOString()
-                      ? null
-                      : event
-                  )
+                  setActiveEventId(activeEventId === event.id ? null : event.id)
                 }
-                active={
-                  activeEvent?.created.toISOString() ===
-                  event.created.toISOString()
-                }
+                active={activeEventId === event.id}
               >
                 <Table.Data nowrap>{event.created.toISOString()}</Table.Data>
                 <Table.Data nowrap>{event.event}</Table.Data>
@@ -115,7 +131,9 @@ export const Events = () => {
             ))}
           </Table.Table>
         </Styled.EventsWrapper>
-        {activeEvent && <Detail event={activeEvent} />}
+        {activeEventId && (
+          <Detail event={events.find(({ id }) => id === activeEventId)} />
+        )}
       </Styled.Container>
     </>
   );

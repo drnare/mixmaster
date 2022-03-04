@@ -8,15 +8,12 @@ export interface MixpanelEventProperties {
   $os: string;
   $screen_height: number;
   $screen_width: number;
-  distinct_id: string;
-  journey: string;
-  mp_lib: string;
-  token: string;
-  url: string;
+  [key: string]: string | number;
 }
 
 export interface MixpanelEvent {
   created: Date;
   event: string;
+  id: string;
   properties: MixpanelEventProperties;
 }
