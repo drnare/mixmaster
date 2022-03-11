@@ -29,7 +29,7 @@ export const Events = () => {
     }
 
     const urlParams = new URL(request.url).searchParams;
-    const [{ value }] = request.postData?.params || [];
+    const [{ value }] = request.postData?.params || [{}];
 
     if (request.method === 'POST' && urlParams.get('verbose')) {
       const events = (JSON.parse(decodeURIComponent(String(value))) ||
